@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
   private FrameLayout root;
   private WebView web;
   private LinearLayout home, cards;
+  private ScrollView homeScreen;
   private TextView catalogStatus;
   private ValueCallback<Uri[]> upload;
   private boolean inWeb=false;
@@ -64,7 +65,7 @@ public class MainActivity extends Activity {
     LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(top);return p;
   }
   private void createHome(){
-    ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+    ScrollView scroll=new ScrollView(this);homeScreen=scroll;scroll.setFillViewport(true);
     scroll.setBackgroundColor(Color.rgb(247,250,248));
     home=new LinearLayout(this); home.setOrientation(LinearLayout.VERTICAL);
     home.setPadding(dp(22),dp(26),dp(22),dp(36));
@@ -179,11 +180,11 @@ public class MainActivity extends Activity {
     });
     root.addView(web,new FrameLayout.LayoutParams(-1,-1));
   }
-  private void showHome(){inWeb=false;web.setVisibility(View.GONE);home.getParent().getParent().setVisibility(View.VISIBLE);}
+  private void showHome(){inWeb=false;web.setVisibility(View.GONE);homeScreen.setVisibility(View.VISIBLE);}
   private void openPage(String url){
     if(!isShipaa(url))return;
     inWeb=true;currentPage=url;
-    home.getParent().getParent().setVisibility(View.GONE);
+    homeScreen.setVisibility(View.GONE);
     web.setVisibility(View.VISIBLE);web.loadUrl(url);
   }
   @Override public void onBackPressed(){
