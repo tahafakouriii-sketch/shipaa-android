@@ -32,7 +32,7 @@ jobs:
         run: |
           curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
-          /tmp/gradle-8.9/bin/gradle :android-app:assembleDebug --no-daemon
+          /tmp/gradle-8.9/bin/gradle :android-app:assembleDebug --no-daemon --settings-file settings.gradle.kts
       - uses: actions/upload-artifact@v4
         with:
           name: shipaa-android-debug-apk
