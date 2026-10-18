@@ -24,7 +24,9 @@ public class MainActivity extends Activity {
   JSONArray courses=new JSONArray();
   String tab="home",nonce="",name=""; long uid; int generation=0;
   final int ink=Color.rgb(37,57,47),green=Color.rgb(64,118,64),muted=Color.rgb(105,120,111);
-  final Runnable refreshDownloads=new Runnable(){public void run(){if(tab.equals("downloads")&&web==null)render();handler.postDelayed(this,2000);}};
+  final java.util.Map<Long,TextView> downloadLabels=new java.util.HashMap<>();
+  final java.util.Map<Long,Button> downloadButtons=new java.util.HashMap<>();
+  final Runnable refreshDownloads=new Runnable(){public void run(){if(tab.equals("downloads")&&web==null)updateDownloadStatus();handler.postDelayed(this,2000);}};
   @Override public void onCreate(Bundle saved){super.onCreate(saved);prefs=getSharedPreferences("learner",MODE_PRIVATE);uid=prefs.getLong("uid",0);name=prefs.getString("name","");try{courses=new JSONArray(prefs.getString("courses","[]"));}catch(Exception ignored){} render();session(false);}
   int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
   GradientDrawable bg(int color,int radius){GradientDrawable b=new GradientDrawable();b.setColor(color);b.setCornerRadius(dp(radius));return b;}
@@ -58,7 +60,43 @@ public class MainActivity extends Activity {
   void download(JSONObject l){if(uid==0||!trustedMedia(l.optString("url")))return;JSONArray all=records();for(int i=0;i<all.length();i++)if(all.optJSONObject(i).optString("lesson").equals(l.optString("id"))){toast("این ویدیو در بخش دانلودهاست");return;}
     new AlertDialog.Builder(this).setTitle("دانلود ویدیو").setMessage("برای تماشای آفلاین، ویدیو روی این دستگاه ذخیره می‌شود. با خروج از حساب حذف خواهد شد.").setPositiveButton("فقط وای‌فای",(d,w)->enqueue(l,true)).setNeutralButton("با اینترنت فعلی",(d,w)->enqueue(l,false)).setNegativeButton("انصراف",null).show();}
   void enqueue(JSONObject l,boolean wifi){try{DownloadManager dm=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);DownloadManager.Request r=new DownloadManager.Request(Uri.parse(l.optString("url")));r.setTitle(l.optString("title"));r.setMimeType("video/mp4");r.setAllowedOverMetered(!wifi);r.setAllowedOverRoaming(false);r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);r.setDestinationInExternalFilesDir(this,Environment.DIRECTORY_MOVIES,uid+"-"+l.optString("id")+".mp4");long id=dm.enqueue(r);JSONObject rec=new JSONObject();rec.put("download",id);rec.put("owner",uid);rec.put("lesson",l.optString("id"));rec.put("title",l.optString("title"));JSONArray a=records();a.put(rec);prefs.edit().putString("downloads",a.toString()).apply();toast("دانلود شروع شد");}catch(Exception e){toast("دانلود شروع نشد؛ فضای خالی و اتصال را بررسی کن");}}
-  void downloads(){body.addView(text("همراه تو، حتی آفلاین",25,ink));body.addView(text("ویدیوهای ذخیره‌شده روی این دستگاه",13,muted));JSONArray a=records();if(a.length()==0)body.addView(text("از داخل جلسات دوره، ویدیوی دلخواهت را دانلود کن.",16,muted));DownloadManager dm=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);for(int i=0;i<a.length();i++){JSONObject rec=a.optJSONObject(i);if(rec==null||uid==0||rec.optLong("owner")!=uid)continue;long id=rec.optLong("download");LinearLayout row=card(Color.WHITE);row.addView(text(rec.optString("title"),17,ink));try(Cursor c=dm.query(new DownloadManager.Query().setFilterById(id))){if(c!=null&&c.moveToFirst()){int state=c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));long bytes=c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)),total=c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));if(state==DownloadManager.STATUS_SUCCESSFUL){row.addView(text("آماده تماشای آفلاین · "+(bytes/1024/1024)+" مگابایت",13,green));row.addView(button("پخش آفلاین",()->{Uri uri=dm.getUriForDownloadedFile(id);if(uri!=null)play(uri.toString(),rec.optString("lesson"),rec.optString("title"));else toast("فایل پیدا نشد؛ دوباره دانلود کن");}));}else row.addView(text(state==DownloadManager.STATUS_FAILED?"دانلود ناموفق؛ حذف کن و دوباره از جلسه دانلود کن":state==DownloadManager.STATUS_PAUSED?"در انتظار اتصال مناسب":total>0?"در حال دانلود · "+(100*bytes/total)+"٪":"در انتظار شروع دانلود",13,muted));}else row.addView(text("فایل در دسترس نیست",13,muted));}catch(Exception e){row.addView(text("وضعیت دانلود در دسترس نیست",13,muted));}row.addView(button("حذف / لغو دانلود",()->{dm.remove(id);JSONArray keep=new JSONArray();JSONArray old=records();for(int j=0;j<old.length();j++)if(old.optJSONObject(j).optLong("download")!=id)keep.put(old.optJSONObject(j));prefs.edit().putString("downloads",keep.toString()).apply();render();}));}}
+  void downloads(){
+    downloadLabels.clear(); downloadButtons.clear();
+    body.addView(text("همراه تو، حتی آفلاین",25,ink));
+    body.addView(text("ویدیوهای ذخیره‌شده روی این دستگاه",13,muted));
+    JSONArray all=records();
+    if(all.length()==0)body.addView(text("از داخل جلسات دوره، ویدیوی دلخواهت را دانلود کن.",16,muted));
+    DownloadManager dm=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);
+    for(int i=0;i<all.length();i++){
+      JSONObject rec=all.optJSONObject(i);
+      if(rec==null||uid==0||rec.optLong("owner")!=uid)continue;
+      long id=rec.optLong("download");
+      LinearLayout row=card(Color.WHITE); row.addView(text(rec.optString("title"),17,ink));
+      TextView status=text("در حال بررسی دانلود…",13,muted);row.addView(status);downloadLabels.put(id,status);
+      Button play=button("پخش آفلاین",()->{Uri uri=dm.getUriForDownloadedFile(id);if(uri!=null)play(uri.toString(),rec.optString("lesson"),rec.optString("title"));else toast("فایل پیدا نشد؛ دوباره دانلود کن");});
+      play.setEnabled(false);row.addView(play);downloadButtons.put(id,play);
+      row.addView(button("حذف / لغو دانلود",()->{
+        dm.remove(id);JSONArray keep=new JSONArray();JSONArray old=records();
+        for(int j=0;j<old.length();j++)if(old.optJSONObject(j).optLong("download")!=id)keep.put(old.optJSONObject(j));
+        prefs.edit().putString("downloads",keep.toString()).apply();render();
+      }));
+    }
+    updateDownloadStatus();
+  }
+  void updateDownloadStatus(){
+    DownloadManager dm=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);
+    for(java.util.Map.Entry<Long,TextView> entry:downloadLabels.entrySet()){
+      long id=entry.getKey();TextView label=entry.getValue();Button play=downloadButtons.get(id);
+      try(Cursor c=dm.query(new DownloadManager.Query().setFilterById(id))){
+        if(c==null||!c.moveToFirst()){label.setText("فایل در دسترس نیست");play.setEnabled(false);continue;}
+        int state=c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+        long bytes=c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+        long total=c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+        boolean ready=state==DownloadManager.STATUS_SUCCESSFUL;play.setEnabled(ready);play.setAlpha(ready?1f:0.45f);
+        label.setText(ready?"آماده تماشای آفلاین · "+(bytes/1024/1024)+" مگابایت":state==DownloadManager.STATUS_FAILED?"دانلود ناموفق؛ حذف کن و دوباره از جلسه دانلود کن":state==DownloadManager.STATUS_PAUSED?"در انتظار اتصال مناسب":total>0?"در حال دانلود · "+(100*bytes/total)+"٪":"در انتظار شروع دانلود");
+      }catch(Exception e){label.setText("وضعیت دانلود در دسترس نیست");play.setEnabled(false);}
+    }
+  }
   void clearDownloads(){DownloadManager dm=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);JSONArray a=records();for(int i=0;i<a.length();i++){JSONObject r=a.optJSONObject(i);if(r!=null)dm.remove(r.optLong("download"));}prefs.edit().remove("downloads").apply();}
   void profile(){body.addView(text("حساب من",26,ink));LinearLayout c=card(Color.rgb(239,234,247));c.addView(text(uid>0?name:"مهمان شیپا",23,ink));c.addView(text("همان حساب سایت، در کنار یادگیری همراه",14,muted));body.addView(button(uid>0?"ویرایش حساب و خدمات شیپا":"ورود / ثبت‌نام",()->sitePage(SITE+"/my-account/")));body.addView(button("تازه‌سازی حساب",()->session(true)));if(uid>0)body.addView(button("خروج از حساب",()->new AlertDialog.Builder(this).setMessage("با خروج از حساب، دانلودهای این دستگاه حذف می‌شوند.").setPositiveButton("خروج",(d,w)->{generation++;clearDownloads();prefs.edit().clear().apply();uid=0;nonce="";name="";courses=new JSONArray();CookieManager.getInstance().removeAllCookies(done->{CookieManager.getInstance().flush();render();});WebStorage.getInstance().deleteAllData();}).setNegativeButton("انصراف",null).show()));body.addView(text("نسخه آزمایشی ۰٫۲ · آموزش همراه شیپا",12,muted));}
   void login(){sitePage(SITE+"/my-account/");}
