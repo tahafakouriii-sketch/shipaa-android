@@ -1,0 +1,12 @@
+{
+  "name": "شیپا | آموزش و یادگیری",
+  "short_name": "شیپا",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7faf8",
+  "theme_color": "#60b85c",
+  "description": "محیط یادگیری شیپا"
+}
