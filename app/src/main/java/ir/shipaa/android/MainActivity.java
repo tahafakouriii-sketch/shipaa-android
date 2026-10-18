@@ -11,7 +11,8 @@ import android.view.*;
 import android.webkit.*;
 import android.widget.*;
 import org.json.*;
-import java.net.*;
+import java.net.URL;
+import java.net.HttpURLConnection;
 import java.io.*;
 import java.util.concurrent.*;
 
