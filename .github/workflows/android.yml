@@ -62,13 +62,13 @@ jobs:
           disable-animations: true
           script: |
             gradle --no-daemon :app:connectedDebugAndroidTest
-            adb pull /sdcard/Android/data/ir.shipaa.android/files/ui-proof ui-proof
+            adb pull /data/local/tmp/shipaa-ui ui-proof
       - name: Preview evidence
         if: always()
         run: |
           python3 - <<'PY'
           import pathlib,base64
-          for p in pathlib.Path('ui-proof').glob('*.png'):
+          for p in pathlib.Path('ui-proof').glob('*.jpg'):
               print('SHIPAA_IMAGE_'+p.stem+'_BEGIN'+base64.b64encode(p.read_bytes()).decode()+'SHIPAA_IMAGE_END')
           PY
       - uses: actions/upload-artifact@v4

@@ -32,8 +32,10 @@ public class NavigationTest {
     void capture(Context c,String name) throws Exception {
         Bitmap full=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
         Bitmap small=Bitmap.createScaledBitmap(full,390,full.getHeight()*390/full.getWidth(),true);
-        File folder=new File(c.getExternalFilesDir(null),"ui-proof");folder.mkdirs();
-        try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){small.compress(Bitmap.CompressFormat.PNG,100,out);}
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();small.compress(Bitmap.CompressFormat.JPEG,88,bytes);
+        String encoded=android.util.Base64.encodeToString(bytes.toByteArray(),android.util.Base64.NO_WRAP);
+        String command="sh -c 'mkdir -p /data/local/tmp/shipaa-ui; echo "+encoded+" | base64 -d > /data/local/tmp/shipaa-ui/"+name+".jpg'";
+        try(android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);FileInputStream in=new FileInputStream(fd.getFileDescriptor())){while(in.read()!=-1){}}
         small.recycle();full.recycle();
     }
 }
