@@ -2,6 +2,7 @@
 // Native renderer fixture: private raw metadata must never be read by bridge.
 define('ABSPATH',__DIR__);$routes=[];$user=0;$enrolled=false;$html='';
 function add_action($name,$fn,$priority=10){if($name==='rest_api_init')$fn();}
+function add_filter($name,$fn,$priority=10,$args=1){}
 function register_rest_route($ns,$path,$args){global $routes;$routes[$path]=$args;}
 function is_user_logged_in(){global $user;return $user>0;}
 function wp_get_current_user(){global $user;return (object)['ID'=>$user,'user_email'=>'fixture@example.invalid'];}

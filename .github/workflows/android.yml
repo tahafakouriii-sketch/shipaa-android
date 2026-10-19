@@ -2,8 +2,7 @@ name: Shipaa native APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, feat/native-learning-offline]
-  pull_request:
+    branches: [main, feat/native-learning-offline, feat/shipaa-1-0]
 permissions:
   contents: read
 jobs:
@@ -31,7 +30,7 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug :app:lintDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Shipaa-Native-0.2-APK
+          name: Shipaa-1.0-beta1-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
