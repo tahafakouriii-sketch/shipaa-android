@@ -23,6 +23,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var container: FrameLayout
+    private lateinit var toolbar: TextView
     private var fullScreenView: View? = null
     private var fullScreenCallback: WebChromeClient.CustomViewCallback? = null
     private val origin = "https://shipaa.ir"
@@ -47,14 +48,14 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.WHITE)
             layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
-        val title = TextView(this).apply {
+        toolbar = TextView(this).apply {
             text = "شیپا  •  خانه یادگیری"
             textSize = 18f
             setTextColor(Color.rgb(51, 135, 69))
             gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
             setPadding(dp(18), 0, dp(18), 0)
         }
-        root.addView(title, LinearLayout.LayoutParams(-1, dp(52)))
+        root.addView(toolbar, LinearLayout.LayoutParams(-1, dp(52)))
 
         container = FrameLayout(this)
         web = WebView(this).apply {
@@ -80,9 +81,9 @@ class MainActivity : Activity() {
                     fullScreenCallback = callback
                     container.addView(view, FrameLayout.LayoutParams(-1, -1))
                     this@MainActivity.web.visibility = View.GONE
-                    title.visibility = View.GONE
+                    toolbar.visibility = View.GONE
                 }
-                override fun onHideCustomView() { closeFullScreen(title) }
+                override fun onHideCustomView() { closeFullScreen() }
             }
         }
         container.addView(web, FrameLayout.LayoutParams(-1, -1))
@@ -106,13 +107,13 @@ class MainActivity : Activity() {
         web.loadUrl(home)
     }
 
-    private fun closeFullScreen(toolbar: TextView? = null) {
+    private fun closeFullScreen() {
         fullScreenView?.let { container.removeView(it) }
         fullScreenView = null
         fullScreenCallback?.onCustomViewHidden()
         fullScreenCallback = null
         web.visibility = View.VISIBLE
-        toolbar?.visibility = View.VISIBLE
+        toolbar.visibility = View.VISIBLE
     }
 
     private fun openExternal(uri: Uri): Boolean {
