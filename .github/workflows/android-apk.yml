@@ -1,7 +1,9 @@
 name: Build Shipaa Android APK
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/mobile-learning-shell-v02
     paths:
       - 'android-app/**'
       - 'build.gradle.kts'
@@ -9,6 +11,7 @@ on:
       - 'gradle.properties'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,20 +23,26 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Prepare Android SDK
+      - name: Locate Android SDK
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)
-          test -n "$SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          test -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" || find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Build debug APK
         run: |
-          curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          curl --fail --location --silent --show-error https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
-          /tmp/gradle-8.9/bin/gradle :android-app:assembleDebug --no-daemon --settings-file settings.gradle.kts
+          /tmp/gradle-8.9/bin/gradle :android-app:assembleDebug --no-daemon
+      - name: Validate APK
+        run: |
+          APK=android-app/build/outputs/apk/debug/android-app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" | tail -n 1
+          ls -lh "$APK"
       - uses: actions/upload-artifact@v4
         with:
-          name: shipaa-android-debug-apk
+          name: shipaa-mobile-pilot-debug-apk
           path: android-app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14

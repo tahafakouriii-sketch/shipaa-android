@@ -14,29 +14,50 @@ import android.webkit.WebResourceRequest
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.FrameLayout
+import android.widget.Toast
 
+/**
+ * Android-first learner shell. Existing WordPress authentication remains authoritative.
+ * This activity does NOT infer paid access or expose direct lesson video URLs.
+ */
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private lateinit var container: FrameLayout
+    private lateinit var toolbar: TextView
+    private var fullScreenView: View? = null
+    private var fullScreenCallback: WebChromeClient.CustomViewCallback? = null
     private val origin = "https://shipaa.ir"
-    private var home = "$origin/"
+    private val home = "$origin/my-account/"
     private val destinations = listOf(
-        "خانه" to "$origin/",
+        "خانه من" to home,
         "دوره‌ها" to "$origin/shop/",
-        "کتابخانه" to "$origin/",
-        "حساب من" to "$origin/my-account/"
+        "کتابخانه" to "$origin/library/",
+        "پروفایل" to home
     )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.rgb(246,250,247)
+        window.statusBarColor = Color.rgb(247, 250, 248)
         window.navigationBarColor = Color.WHITE
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE) }
-        val toolbar = TextView(this).apply {
-            text = "شیپا  •  آموزش و عضویت"
-            setTextColor(Color.rgb(45,112,67)); textSize = 18f; gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
-            setPadding(22, 14, 22, 14)
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
-        root.addView(toolbar, LinearLayout.LayoutParams(-1, dp(54)))
+        toolbar = TextView(this).apply {
+            text = "شیپا  •  خانه یادگیری"
+            textSize = 18f
+            setTextColor(Color.rgb(51, 135, 69))
+            gravity = Gravity.CENTER_VERTICAL or Gravity.RIGHT
+            setPadding(dp(18), 0, dp(18), 0)
+        }
+        root.addView(toolbar, LinearLayout.LayoutParams(-1, dp(52)))
+
+        container = FrameLayout(this)
         web = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -44,38 +65,73 @@ class MainActivity : Activity() {
             settings.allowContentAccess = false
             settings.javaScriptCanOpenWindowsAutomatically = false
             settings.setSupportMultipleWindows(false)
-            webChromeClient = WebChromeClient()
+            settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    val url = request.url
-                    if (url.scheme == "https" && (url.host == "shipaa.ir" || url.host == "www.shipaa.ir")) return false
-                    if (url.scheme == "https" || url.scheme == "http" || url.scheme == "eitaa") {
-                        return launchExternal(url)
-                    }
+                    val u = request.url
+                    if (u.scheme == "https" && (u.host == "shipaa.ir" || u.host == "www.shipaa.ir")) return false
+                    if (u.scheme in listOf("https", "http", "eitaa", "mailto", "tel")) return openExternal(u)
                     return true
                 }
             }
-        }
-        root.addView(web, LinearLayout.LayoutParams(-1, 0, 1f))
-        val nav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setBackgroundColor(Color.rgb(246,250,247)) }
-        destinations.forEach { (title,url) ->
-            val item = TextView(this).apply {
-                text = title; gravity = Gravity.CENTER; textSize = 13f
-                setTextColor(Color.rgb(45,112,67))
-                setOnClickListener { web.loadUrl(url) }
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                    if (fullScreenView != null) { callback.onCustomViewHidden(); return }
+                    fullScreenView = view
+                    fullScreenCallback = callback
+                    container.addView(view, FrameLayout.LayoutParams(-1, -1))
+                    this@MainActivity.web.visibility = View.GONE
+                    toolbar.visibility = View.GONE
+                }
+                override fun onHideCustomView() { closeFullScreen() }
             }
-            nav.addView(item, LinearLayout.LayoutParams(0, dp(62), 1f))
+        }
+        container.addView(web, FrameLayout.LayoutParams(-1, -1))
+        root.addView(container, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(Color.rgb(247, 250, 248))
+        }
+        destinations.forEach { (label, url) ->
+            nav.addView(TextView(this).apply {
+                text = label
+                gravity = Gravity.CENTER
+                textSize = 13f
+                setTextColor(Color.rgb(47, 111, 67))
+                setOnClickListener { web.loadUrl(url) }
+            }, LinearLayout.LayoutParams(0, dp(58), 1f))
         }
         root.addView(nav)
         setContentView(root)
         web.loadUrl(home)
     }
-    private fun launchExternal(uri: Uri): Boolean = try {
-        startActivity(Intent(Intent.ACTION_VIEW, uri))
-        true
-    } catch (_: Exception) { true }
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun closeFullScreen() {
+        fullScreenView?.let { container.removeView(it) }
+        fullScreenView = null
+        fullScreenCallback?.onCustomViewHidden()
+        fullScreenCallback = null
+        web.visibility = View.VISIBLE
+        toolbar.visibility = View.VISIBLE
+    }
+
+    private fun openExternal(uri: Uri): Boolean {
+        return try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+            true
+        } catch (_: Exception) {
+            Toast.makeText(this, "برنامه مناسب برای باز کردن پیوند پیدا نشد", Toast.LENGTH_SHORT).show()
+            true
+        }
+    }
+
+    private fun dp(px: Int): Int = (px * resources.displayMetrics.density).toInt()
+
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() { if (web.canGoBack()) web.goBack() else super.onBackPressed() }
+    override fun onBackPressed() {
+        if (fullScreenView != null) { closeFullScreen(); return }
+        if (web.canGoBack()) web.goBack() else super.onBackPressed()
+    }
     override fun onDestroy() { web.destroy(); super.onDestroy() }
 }
