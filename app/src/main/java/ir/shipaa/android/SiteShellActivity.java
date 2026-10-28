@@ -17,6 +17,8 @@ import android.webkit.WebViewClient;
 import android.webkit.WebResourceError;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+import android.widget.TextView;
+import android.view.Gravity;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import androidx.webkit.JavaScriptReplyProxy;
@@ -105,6 +107,15 @@ public final class SiteShellActivity extends Activity {
       @Override public void onHideCustomView(){closeFullScreen();}
     });
     root.addView(web,new FrameLayout.LayoutParams(-1,-1));
+    TextView offlineEntry=new TextView(this);
+    offlineEntry.setText("⇩");offlineEntry.setTextSize(21);offlineEntry.setTextColor(0xff287d46);
+    offlineEntry.setGravity(Gravity.CENTER);offlineEntry.setContentDescription("ویدئوهای ذخیره‌شده شیپا");
+    offlineEntry.setBackgroundTintList(null);
+    offlineEntry.setBackgroundColor(0xffecf7e8);
+    FrameLayout.LayoutParams offlineLayout=new FrameLayout.LayoutParams(dp(46),dp(46),Gravity.TOP|Gravity.LEFT);
+    offlineLayout.setMargins(dp(8),dp(7),0,0);
+    root.addView(offlineEntry,offlineLayout);
+    offlineEntry.setOnClickListener(v->openLibrary());
     setContentView(root);
     web.loadUrl(HOME);
   }
@@ -150,6 +161,7 @@ public final class SiteShellActivity extends Activity {
     customCallback=null;
     web.setVisibility(View.VISIBLE);
   }
+  private int dp(int x){return (int)(x*getResources().getDisplayMetrics().density+.5f);}
   private void toast(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
   @Override public void onBackPressed(){
     if(customView!=null){closeFullScreen();return;}
