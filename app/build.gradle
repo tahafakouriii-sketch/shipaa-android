@@ -1,17 +1,18 @@
 plugins { id 'com.android.application' }
 android {
-  namespace 'ir.shipaa.android'
-  compileSdk 36
-  defaultConfig {
-    applicationId 'ir.shipaa.android'
-    minSdk 24
-    targetSdk 35
-    versionCode 4
-    versionName '0.3.0-design-beta'
-  }
-  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+ namespace 'ir.shipaa.android'
+ compileSdk 35
+ defaultConfig {
+  applicationId 'ir.shipaa.android'
+  minSdk 24
+  targetSdk 35
+  versionCode 5
+  versionName '1.0.0-unified-preview'
+ }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies {
  implementation "androidx.media3:media3-exoplayer:1.8.0"
  implementation "androidx.media3:media3-ui:1.8.0"
+ implementation "androidx.webkit:webkit:1.13.0"
 }
